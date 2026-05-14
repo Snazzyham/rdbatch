@@ -7,7 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/soham/rdbatch/internal/models"
+	"github.com/soham/rdbatch/internal/api"
 )
 
 var (
@@ -24,11 +24,11 @@ var (
 )
 
 type item struct {
-	torrent  models.Torrent
+	torrent  api.Torrent
 	selected bool
 }
 
-func (i item) FilterValue() string { return i.torrent.Filename }
+func (i item) FilterValue() string { return i.torrent.Name }
 
 type Model struct {
 	list     list.Model
@@ -52,12 +52,14 @@ func formatSize(bytes int64) string {
 
 func statusColor(status string) lipgloss.Style {
 	switch status {
-	case "downloaded", "magnet_conversion":
+	case "downloaded", "magnet_conversion", "cached", "completed":
 		return statusReady
-	case "waiting_files_selection", "queued", "downloading":
+	case "waiting_files_selection", "queued", "downloading", "uploading":
 		return statusWaiting
-	case "error", "magnet_error", "virus", "dead":
+	case "error", "magnet_error", "virus", "dead", "stalled":
 		return statusError
+	case "paused":
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
 	default:
 		return lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
 	}
@@ -82,13 +84,13 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	}
 
 	t := it.torrent
-	name := t.Filename
+	name := t.Name
 	if len(name) > 45 {
 		name = name[:42] + "..."
 	}
 
 	status := statusColor(t.Status).Render(t.Status)
-	size := formatSize(t.Bytes)
+	size := formatSize(t.Size)
 	added := t.Added.Format("2006-01-02")
 
 	// Cursor indicator
@@ -110,7 +112,7 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	fmt.Fprint(w, line)
 }
 
-func New(torrents []models.Torrent) Model {
+func New(torrents []api.Torrent) Model {
 	items := make([]item, len(torrents))
 	for i, t := range torrents {
 		items[i] = item{torrent: t}
@@ -123,7 +125,7 @@ func New(torrents []models.Torrent) Model {
 
 	delegate := itemDelegate{}
 	l := list.New(listItems, delegate, 0, 0)
-	l.Title = "Real-Debrid Torrents"
+	l.Title = "Torrents"
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
 	l.SetShowHelp(false)
@@ -199,8 +201,8 @@ func (m Model) View() string {
 	return m.list.View() + "\n" + help
 }
 
-func (m Model) SelectedTorrents() []models.Torrent {
-	var selected []models.Torrent
+func (m Model) SelectedTorrents() []api.Torrent {
+	var selected []api.Torrent
 	for i, it := range m.items {
 		if m.selected[i] {
 			selected = append(selected, it.torrent)
@@ -209,7 +211,7 @@ func (m Model) SelectedTorrents() []models.Torrent {
 	return selected
 }
 
-func Run(torrents []models.Torrent) ([]models.Torrent, error) {
+func Run(torrents []api.Torrent) ([]api.Torrent, error) {
 	m := New(torrents)
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	finalModel, err := p.Run()

@@ -49,6 +49,17 @@ func (t RDTime) Format(layout string) string {
 	return t.Time.Format(layout)
 }
 
+// Config holds the parsed configuration for rdbatch.
+type Config struct {
+	Provider         string `json:"provider"`
+	RealDebridAPIKey string `json:"realdebrid_api_key"`
+	TorboxAPIKey     string `json:"torbox_api_key"`
+	// APIKey is kept for backward compatibility (maps to RealDebridAPIKey)
+	APIKey string `json:"api_key"`
+}
+
+// --- Real-Debrid specific models ---
+
 type Torrent struct {
 	ID       string   `json:"id"`
 	Filename string   `json:"filename"`
@@ -101,6 +112,53 @@ type AddMagnetResponse struct {
 	URI string `json:"uri"`
 }
 
-type Config struct {
-	APIKey string `json:"api_key"`
+// --- Torbox specific models ---
+
+type TorboxCreateTorrentResponse struct {
+	Success bool                   `json:"success"`
+	Data    TorboxTorrentCreated   `json:"data"`
+}
+
+type TorboxTorrentCreated struct {
+	TorrentID     int    `json:"torrent_id"`
+	Name          string `json:"name"`
+	DownloadState string `json:"download_state"`
+}
+
+type TorboxTorrent struct {
+	ID            int    `json:"id"`
+	Name          string `json:"name"`
+	DownloadState string `json:"download_state"`
+	Size          int64  `json:"size"`
+	CreatedAt     int64  `json:"created_at"`
+}
+
+type TorboxTorrentListResponse struct {
+	Success bool            `json:"success"`
+	Data    []TorboxTorrent `json:"data"`
+}
+
+type TorboxTorrentDetailResponse struct {
+	Success bool          `json:"success"`
+	Data    TorboxTorrentDetail `json:"data"`
+}
+
+type TorboxTorrentDetail struct {
+	ID            int              `json:"id"`
+	Name          string           `json:"name"`
+	DownloadState string           `json:"download_state"`
+	Size          int64            `json:"size"`
+	CreatedAt     int64            `json:"created_at"`
+	Files         []TorboxFile     `json:"files"`
+}
+
+type TorboxFile struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+	Size int64  `json:"size"`
+}
+
+type TorboxRequestDLResponse struct {
+	Success bool   `json:"success"`
+	Data    string `json:"data"`
 }

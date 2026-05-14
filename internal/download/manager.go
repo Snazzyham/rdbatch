@@ -10,15 +10,17 @@ import (
 type Manager struct {
 	semaphore chan struct{}
 	unlimited bool
+	flags     []string
 }
 
-func New(concurrent int) *Manager {
+func New(concurrent int, flags []string) *Manager {
+	m := &Manager{flags: flags}
 	if concurrent <= 0 {
-		return &Manager{unlimited: true}
+		m.unlimited = true
+	} else {
+		m.semaphore = make(chan struct{}, concurrent)
 	}
-	return &Manager{
-		semaphore: make(chan struct{}, concurrent),
-	}
+	return m
 }
 
 func (m *Manager) Download(urls []string, dir string) error {
@@ -54,15 +56,9 @@ func (m *Manager) Download(urls []string, dir string) error {
 }
 
 func (m *Manager) downloadOne(url, dir string) error {
-	cmd := exec.Command("aria2c",
-		"-x", "16",
-		"-s", "16",
-		"-k", "1M",
-		"--continue=true",
-		"--auto-file-renaming=false",
-		"--dir", dir,
-		url,
-	)
+	args := append([]string{}, m.flags...)
+	args = append(args, "--dir", dir, url)
+	cmd := exec.Command("aria2c", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()

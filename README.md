@@ -1,6 +1,6 @@
 # rdbatch
 
-A lightweight, terminal-native CLI tool for [Real-Debrid](https://real-debrid.com/). Add magnets, browse your torrents, and batch-download files via `aria2c` — zero browser interaction required.
+A lightweight, terminal-native CLI tool for [Real-Debrid](https://real-debrid.com/) and [Torbox](https://torbox.app/). Add magnets, browse your torrents, and batch-download files via `aria2c` — zero browser interaction required.
 
 ![Go](https://img.shields.io/badge/Go-1.22%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -9,10 +9,11 @@ A lightweight, terminal-native CLI tool for [Real-Debrid](https://real-debrid.co
 
 ## Features
 
+- **Multi-provider support** — Real-Debrid and Torbox backends
 - **Add magnets** directly from the terminal
 - **Auto-select video files** when adding a torrent (skips samples, nfo, txt, etc.)
 - **Interactive TUI** to browse, multi-select, and batch-download torrents
-- **Unrestricted direct CDN links** via Real-Debrid
+- **Unrestricted direct CDN links** via Real-Debrid or Torbox
 - **Concurrent aria2c downloads** with configurable limits (or unlimited)
 - **Downloads to your current working directory**
 - **Lightweight & fast** — single binary, no local database
@@ -52,27 +53,51 @@ sudo pacman -S aria2
 
 ## Configuration
 
-`rdbatch` needs a Real-Debrid API key. You can provide it in two ways:
+`rdbatch` requires a provider and the corresponding API key.
 
-### 1. Environment Variable (recommended)
+### 1. Choose a Provider
+
+Set the `RDBATCH_PROVIDER` environment variable:
 
 ```bash
-export REALDEBRID_API_KEY="your_api_key_here"
+# Real-Debrid
+export RDBATCH_PROVIDER=real-debrid
+
+# Torbox
+export RDBATCH_PROVIDER=torbox
 ```
 
-### 2. Config File
+### 2. Set Your API Key
+
+**Environment Variable (recommended)**
+
+```bash
+# Real-Debrid
+export REALDEBRID_API_KEY="your_api_key_here"
+
+# Torbox
+export TORBOX_API_KEY="your_api_key_here"
+```
+
+**Config File**
 
 Create `~/.config/rdbatch/config.json`:
 
 ```json
 {
-  "api_key": "your_api_key_here"
+  "provider": "torbox",
+  "realdebrid_api_key": "xxxxxxxx",
+  "torbox_api_key": "xxxxxxxx"
 }
 ```
 
-> The environment variable overrides the config file if both are set.
+> The `provider` field in the config file is used as a fallback when `RDBATCH_PROVIDER` is not set. Environment variables override config file values.
 
-You can find your API key at: https://real-debrid.com/apitoken
+> **Backward compatibility:** the old `api_key` field is still accepted for Real-Debrid if `realdebrid_api_key` is not present.
+
+You can find your API key at:
+- Real-Debrid: https://real-debrid.com/apitoken
+- Torbox: https://torbox.app/settings
 
 ---
 
@@ -86,7 +111,7 @@ rdbatch fetch "magnet:?xt=urn:btih:..."
 
 This will:
 1. Validate the magnet link
-2. Add it to your Real-Debrid queue
+2. Add it to your provider queue
 3. **Auto-select only video files** (with fallback to all files if none detected)
 
 ### List & download torrents
@@ -133,7 +158,7 @@ rdbatch list
 ## Command Reference
 
 ```
-rdbatch fetch <magnet>     Add a magnet to Real-Debrid
+rdbatch fetch <magnet>     Add a magnet to the active provider
 rdbatch list               Open interactive torrent list & downloader
 rdbatch list -c 10         Limit concurrent downloads to 10
 ```
@@ -159,18 +184,21 @@ tail -f ~/.local/share/rdbatch/rdbatch.log
 Then run `rdbatch list` in another terminal. The log will show:
 - API requests and responses (status codes, raw JSON)
 - How many torrents were decoded
-- Any errors from Real-Debrid
+- Any errors from the provider
 
 ### Common Issues
 
+**Missing provider:**
+- Ensure `RDBATCH_PROVIDER` is set to either `real-debrid` or `torbox`
+
 **Empty torrent list:**
-- Check your API key is valid at https://real-debrid.com/apitoken
+- Check your API key is valid
 - Look at the log file — if the API returns `[]`, your account genuinely has no recent torrents
 - If the API returns a 401 error, your API key is invalid or expired
 
 **Downloads fail:**
 - Ensure `aria2c` is installed and in your `PATH`
-- Check that you have enough Real-Debrid fair-use points remaining
+- Check that you have enough fair-use points remaining (Real-Debrid) or active subscription (Torbox)
 
 ---
 
@@ -179,9 +207,9 @@ Then run `rdbatch list` in another terminal. The log will show:
 ```
 cmd/rdbatch/main.go
 internal/
-  api/          Real-Debrid REST API client
+  api/          Provider interface + Real-Debrid & Torbox REST clients
   commands/     Cobra CLI commands
-  config/       API key resolution (env → config file)
+  config/       Provider & API key resolution (env → config file)
   download/     aria2c download manager
   models/       Data structures
   ui/           Bubble Tea interactive list
@@ -228,4 +256,4 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 ---
 
-> **Disclaimer:** This project is not affiliated with Real-Debrid. Use responsibly and in accordance with Real-Debrid's terms of service.
+> **Disclaimer:** This project is not affiliated with Real-Debrid or Torbox. Use responsibly and in accordance with each provider's terms of service.
