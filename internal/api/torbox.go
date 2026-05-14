@@ -103,7 +103,7 @@ func (c *TorboxClient) ListTorrents() ([]Torrent, error) {
 
 	// Sort by CreatedAt descending (newest first) and limit to 40
 	sort.Slice(result.Data, func(i, j int) bool {
-		return result.Data[i].CreatedAt > result.Data[j].CreatedAt
+		return result.Data[i].CreatedAt.Unix() > result.Data[j].CreatedAt.Unix()
 	})
 
 	var torrents []Torrent
@@ -116,7 +116,7 @@ func (c *TorboxClient) ListTorrents() ([]Torrent, error) {
 			Name:   t.Name,
 			Status: t.DownloadState,
 			Size:   t.Size,
-			Added:  time.Unix(t.CreatedAt, 0),
+			Added:  t.CreatedAt.Time,
 		})
 	}
 

@@ -63,6 +63,11 @@ All notable changes to `rdbatch` are documented in this file.
   - Added a custom `RDTime` type with robust unmarshalling for all three formats
   - Prevents silent JSON decode failures that could result in empty torrent lists
 
+- **Torbox `created_at` string timestamp**
+  - Torbox returns `created_at` as a stringified Unix timestamp instead of an integer
+  - Added a custom `UnixTime` type that unmarshals both integer and string Unix timestamps
+  - Prevents `json: cannot unmarshal string into Go struct field ... of type int64` errors
+
 ### Project Setup
 
 - Initialized Go module (`go mod init`) with dependencies:

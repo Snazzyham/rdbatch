@@ -49,6 +49,49 @@ func (t RDTime) Format(layout string) string {
 	return t.Time.Format(layout)
 }
 
+// UnixTime handles timestamps that may be returned as Unix integers,
+// stringified Unix integers, or RFC3339 strings.
+type UnixTime struct {
+	time.Time
+}
+
+func (t *UnixTime) UnmarshalJSON(data []byte) error {
+	// Try integer Unix timestamp first
+	var ts int64
+	if err := json.Unmarshal(data, &ts); err == nil {
+		t.Time = time.Unix(ts, 0)
+		return nil
+	}
+
+	// Try string
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		// Try RFC3339 / ISO8601 first
+		if parsed, err := time.Parse(time.RFC3339Nano, s); err == nil {
+			t.Time = parsed
+			return nil
+		}
+		if parsed, err := time.Parse(time.RFC3339, s); err == nil {
+			t.Time = parsed
+			return nil
+		}
+		// Try Unix timestamp as string
+		if ts, err := strconv.ParseInt(s, 10, 64); err == nil {
+			t.Time = time.Unix(ts, 0)
+			return nil
+		}
+	}
+
+	return fmt.Errorf("cannot parse UnixTime: %s", string(data))
+}
+
+func (t UnixTime) Format(layout string) string {
+	if t.IsZero() {
+		return "unknown"
+	}
+	return t.Time.Format(layout)
+}
+
 // Config holds the parsed configuration for rdbatch.
 type Config struct {
 	Provider         string `json:"provider"`
@@ -126,11 +169,11 @@ type TorboxTorrentCreated struct {
 }
 
 type TorboxTorrent struct {
-	ID            int    `json:"id"`
-	Name          string `json:"name"`
-	DownloadState string `json:"download_state"`
-	Size          int64  `json:"size"`
-	CreatedAt     int64  `json:"created_at"`
+	ID            int       `json:"id"`
+	Name          string    `json:"name"`
+	DownloadState string    `json:"download_state"`
+	Size          int64     `json:"size"`
+	CreatedAt     UnixTime  `json:"created_at"`
 }
 
 type TorboxTorrentListResponse struct {
@@ -144,12 +187,12 @@ type TorboxTorrentDetailResponse struct {
 }
 
 type TorboxTorrentDetail struct {
-	ID            int              `json:"id"`
-	Name          string           `json:"name"`
-	DownloadState string           `json:"download_state"`
-	Size          int64            `json:"size"`
-	CreatedAt     int64            `json:"created_at"`
-	Files         []TorboxFile     `json:"files"`
+	ID            int          `json:"id"`
+	Name          string       `json:"name"`
+	DownloadState string       `json:"download_state"`
+	Size          int64        `json:"size"`
+	CreatedAt     UnixTime     `json:"created_at"`
+	Files         []TorboxFile `json:"files"`
 }
 
 type TorboxFile struct {
