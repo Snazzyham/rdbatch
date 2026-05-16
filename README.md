@@ -13,6 +13,8 @@ A lightweight, terminal-native CLI tool for [Real-Debrid](https://real-debrid.co
 - **Add magnets** directly from the terminal
 - **Auto-select video files** when adding a torrent (skips samples, nfo, txt, etc.)
 - **Interactive TUI** to browse, multi-select, and batch-download torrents
+- **File-level selection** inside the TUI (Torbox)
+- **Watch directly** from the UI — stream videos via `mpv` or `VLC` without downloading to disk
 - **Unrestricted direct CDN links** via Real-Debrid or Torbox
 - **Concurrent aria2c downloads** with configurable limits (or unlimited)
 - **Downloads to your current working directory**
@@ -128,6 +130,9 @@ Opens an interactive terminal UI showing your latest 40 torrents.
 |-----|--------|
 | `↑` / `↓` | Navigate |
 | `Space` | Toggle selection |
+| `F` | Browse files (Torbox) |
+| `W` | Watch / Stream in player |
+| `Esc` | Back to torrent list |
 | `A` | Select all |
 | `N` | Select none |
 | `Enter` | Download selected |
@@ -239,7 +244,6 @@ Potential future features (not required for MVP):
 - Fuzzy search filter inside TUI (`/` search mode)
 - Auto-refresh torrent statuses
 - Clipboard integration for magnets
-- File-level selection inside the TUI
 - `fetch --wait --download` auto-download mode
 
 ---

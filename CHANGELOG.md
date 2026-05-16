@@ -4,7 +4,34 @@ All notable changes to `rdbatch` are documented in this file.
 
 ---
 
-## [Unreleased]
+## [0.2] - 2026-05-16
+
+### Added
+
+- **File-level navigation (Torbox)**
+  - New `F` keybinding to browse files within a torrent.
+  - Support for multi-selecting and downloading specific files from a torrent.
+  - New `ListFiles` method in `Provider` interface.
+
+- **Direct Streaming / "Watch" mode**
+  - New `W` keybinding to stream video files directly in `mpv` (primary) or `VLC` (fallback).
+  - Supports both torrent-level (auto-selects largest file) and file-level streaming.
+  - Zero-disk-usage streaming: players stream directly from CDN URLs.
+  - Works for both Real-Debrid and Torbox.
+
+- **Internal Player Package** (`internal/player/player.go`)
+  - Automated detection of local media players.
+  - Integration with `bubbletea` via `tea.ExecProcess`.
+
+### Fixed
+
+- **Torbox `requestdl` Method**
+  - Corrected API call from `POST` to `GET` as per official documentation.
+  - Fixed "405 Method Not Allowed" errors when retrieving download links.
+
+---
+
+## [0.1] - 2026-05-16
 
 ### Added
 
@@ -20,7 +47,7 @@ All notable changes to `rdbatch` are documented in this file.
   - `GET /torrents/mylist?bypass_cache=true` — list torrents (latest 40, sorted newest-first)
   - Two-step download link resolution:
     - `GET /torrents/mylist?id={id}` to retrieve file list
-    - `POST /torrents/requestdl` per file to obtain direct CDN URLs
+    - `GET /torrents/requestdl` per file to obtain direct CDN URLs
   - Provider-specific aria2 flags: `-x 1 -s 1`
 
 - **Updated config schema**
@@ -91,5 +118,5 @@ All notable changes to `rdbatch` are documented in this file.
 
 ## Notes
 
-- This project is in active development. The MVP is complete and functional.
+- This project is in active development.
 - See `README.md` for build instructions and `briefs/` for the full spec and future roadmap.

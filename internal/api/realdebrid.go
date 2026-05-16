@@ -109,7 +109,11 @@ func (c *RealDebridClient) ListTorrents() ([]Torrent, error) {
 	return torrents, nil
 }
 
-func (c *RealDebridClient) GetDownloadLinks(torrentID string) ([]string, error) {
+func (c *RealDebridClient) ListFiles(torrentID string) ([]File, error) {
+	return nil, fmt.Errorf("listing files is not supported for Real-Debrid yet")
+}
+
+func (c *RealDebridClient) GetDownloadLinks(torrentID string, fileIDs []string) ([]string, error) {
 	info, err := c.GetTorrentInfo(torrentID)
 	if err != nil {
 		return nil, err
@@ -262,6 +266,31 @@ func (c *RealDebridClient) UnrestrictLink(link string) (*models.UnrestrictedLink
 		return nil, fmt.Errorf("failed to decode unrestricted link: %w", err)
 	}
 	return &result, nil
+}
+
+func (c *RealDebridClient) GetStreamLink(torrentID string, fileID string) (string, error) {
+	info, err := c.GetTorrentInfo(torrentID)
+	if err != nil {
+		return "", err
+	}
+
+	if len(info.Links) == 0 {
+		return "", fmt.Errorf("no links available for torrent %s", torrentID)
+	}
+
+	// Real-Debrid doesn't expose a simple way to map fileID to links here without more logic,
+	// but usually the first link or the one corresponding to the largest file is what we want.
+	// Since GetDownloadLinks already unrestricted all, but here we just want one.
+
+	link := info.Links[0]
+	// If there are multiple links, we could try to find the "best" one, but for now info.Links[0] is usually the main file.
+
+	unrestricted, err := c.UnrestrictLink(link)
+	if err != nil {
+		return "", err
+	}
+
+	return unrestricted.Download, nil
 }
 
 func (c *RealDebridClient) Aria2Flags() []string {

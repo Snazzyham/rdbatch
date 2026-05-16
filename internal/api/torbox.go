@@ -123,8 +123,7 @@ func (c *TorboxClient) ListTorrents() ([]Torrent, error) {
 	return torrents, nil
 }
 
-func (c *TorboxClient) GetDownloadLinks(torrentID string) ([]string, error) {
-	// Step A: Get file list
+func (c *TorboxClient) ListFiles(torrentID string) ([]File, error) {
 	endpoint := fmt.Sprintf("/torrents/mylist?id=%s&bypass_cache=true", url.QueryEscape(torrentID))
 	resp, err := c.doRequest("GET", endpoint, nil, "")
 	if err != nil {
@@ -133,10 +132,10 @@ func (c *TorboxClient) GetDownloadLinks(torrentID string) ([]string, error) {
 	defer resp.Body.Close()
 
 	bodyBytes, _ := io.ReadAll(resp.Body)
-	log.Printf("Torbox GetDownloadLinks (info) status=%d body=%s", resp.StatusCode, string(bodyBytes))
+	log.Printf("Torbox ListFiles status=%d body=%s", resp.StatusCode, string(bodyBytes))
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to get torrent info: %s - %s", resp.Status, string(bodyBytes))
+		return nil, fmt.Errorf("failed to get torrent files: %s - %s", resp.Status, string(bodyBytes))
 	}
 
 	var result models.TorboxTorrentDetailResponse
@@ -148,16 +147,44 @@ func (c *TorboxClient) GetDownloadLinks(torrentID string) ([]string, error) {
 		return nil, fmt.Errorf("torbox returned unsuccessful response: %s", string(bodyBytes))
 	}
 
-	if len(result.Data.Files) == 0 {
-		return nil, fmt.Errorf("no files found for torrent %s", torrentID)
+	var files []File
+	for _, f := range result.Data.Files {
+		files = append(files, File{
+			ID:   fmt.Sprintf("%d", f.ID),
+			Name: f.Name,
+			Size: f.Size,
+		})
+	}
+
+	return files, nil
+}
+
+func (c *TorboxClient) GetDownloadLinks(torrentID string, fileIDs []string) ([]string, error) {
+	var targetFiles []string
+
+	if len(fileIDs) > 0 {
+		targetFiles = fileIDs
+	} else {
+		// If no fileIDs provided, get all files
+		files, err := c.ListFiles(torrentID)
+		if err != nil {
+			return nil, err
+		}
+		for _, f := range files {
+			targetFiles = append(targetFiles, f.ID)
+		}
+	}
+
+	if len(targetFiles) == 0 {
+		return nil, fmt.Errorf("no files selected for torrent %s", torrentID)
 	}
 
 	// Step B: Request download URL per file
 	var urls []string
-	for _, file := range result.Data.Files {
-		dlURL, err := c.requestDownloadURL(torrentID, fmt.Sprintf("%d", file.ID))
+	for _, fileID := range targetFiles {
+		dlURL, err := c.requestDownloadURL(torrentID, fileID)
 		if err != nil {
-			log.Printf("Torbox requestdl failed for file %d: %v", file.ID, err)
+			log.Printf("Torbox requestdl failed for file %s: %v", fileID, err)
 			continue
 		}
 		urls = append(urls, dlURL)
@@ -171,12 +198,13 @@ func (c *TorboxClient) GetDownloadLinks(torrentID string) ([]string, error) {
 }
 
 func (c *TorboxClient) requestDownloadURL(torrentID, fileID string) (string, error) {
-	data := url.Values{}
-	data.Set("token", c.apiKey)
-	data.Set("torrent_id", torrentID)
-	data.Set("file_id", fileID)
+	params := url.Values{}
+	params.Set("token", c.apiKey)
+	params.Set("torrent_id", torrentID)
+	params.Set("file_id", fileID)
 
-	resp, err := c.doRequest("POST", "/torrents/requestdl", strings.NewReader(data.Encode()), "application/x-www-form-urlencoded")
+	endpoint := fmt.Sprintf("/torrents/requestdl?%s", params.Encode())
+	resp, err := c.doRequest("GET", endpoint, nil, "")
 	if err != nil {
 		return "", err
 	}
@@ -199,6 +227,31 @@ func (c *TorboxClient) requestDownloadURL(torrentID, fileID string) (string, err
 	}
 
 	return result.Data, nil
+}
+
+func (c *TorboxClient) GetStreamLink(torrentID string, fileID string) (string, error) {
+	if fileID != "" {
+		return c.requestDownloadURL(torrentID, fileID)
+	}
+
+	// No fileID provided, find the largest file
+	files, err := c.ListFiles(torrentID)
+	if err != nil {
+		return "", err
+	}
+
+	if len(files) == 0 {
+		return "", fmt.Errorf("no files found in torrent")
+	}
+
+	var largest File
+	for _, f := range files {
+		if f.Size > largest.Size {
+			largest = f
+		}
+	}
+
+	return c.requestDownloadURL(torrentID, largest.ID)
 }
 
 func (c *TorboxClient) Aria2Flags() []string {

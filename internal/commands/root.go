@@ -78,15 +78,15 @@ var listCmd = &cobra.Command{
 			return nil
 		}
 
-		selected, err := ui.Run(torrents)
+		selected, err := ui.Run(provider, torrents)
 		if err != nil {
 			log.Printf("list: tui error: %v", err)
 			return err
 		}
-		log.Printf("list: %d torrents selected", len(selected))
+		log.Printf("list: %d items selected", len(selected))
 
 		if len(selected) == 0 {
-			fmt.Println("No torrents selected.")
+			fmt.Println("No items selected.")
 			return nil
 		}
 
@@ -95,28 +95,28 @@ var listCmd = &cobra.Command{
 			return fmt.Errorf("could not get current directory: %w", err)
 		}
 
-		fmt.Printf("Downloading %d torrent(s) to %s...\n", len(selected), cwd)
+		fmt.Printf("Downloading %d selection(s) to %s...\n", len(selected), cwd)
 
 		dl := download.New(concurrent, provider.Aria2Flags())
 		var failed int
-		for _, torrent := range selected {
-			log.Printf("list: processing torrent id=%s name=%s", torrent.ID, torrent.Name)
+		for _, sel := range selected {
+			log.Printf("list: processing torrent id=%s name=%s files=%v", sel.TorrentID, sel.Name, sel.FileIDs)
 
-			urls, err := provider.GetDownloadLinks(torrent.ID)
+			urls, err := provider.GetDownloadLinks(sel.TorrentID, sel.FileIDs)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error getting links for %s: %v\n", torrent.Name, err)
+				fmt.Fprintf(os.Stderr, "Error getting links for %s: %v\n", sel.Name, err)
 				failed++
 				continue
 			}
 
 			if len(urls) == 0 {
-				fmt.Fprintf(os.Stderr, "No links available for %s\n", torrent.Name)
+				fmt.Fprintf(os.Stderr, "No links available for %s\n", sel.Name)
 				failed++
 				continue
 			}
 
 			if err := dl.Download(urls, cwd); err != nil {
-				fmt.Fprintf(os.Stderr, "Error downloading %s: %v\n", torrent.Name, err)
+				fmt.Fprintf(os.Stderr, "Error downloading %s: %v\n", sel.Name, err)
 				failed++
 				continue
 			}
