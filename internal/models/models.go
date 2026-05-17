@@ -97,6 +97,7 @@ type Config struct {
 	Provider         string `json:"provider"`
 	RealDebridAPIKey string `json:"realdebrid_api_key"`
 	TorboxAPIKey     string `json:"torbox_api_key"`
+	CometURL         string `json:"comet_url"`
 	// APIKey is kept for backward compatibility (maps to RealDebridAPIKey)
 	APIKey string `json:"api_key"`
 }
@@ -158,8 +159,8 @@ type AddMagnetResponse struct {
 // --- Torbox specific models ---
 
 type TorboxCreateTorrentResponse struct {
-	Success bool                   `json:"success"`
-	Data    TorboxTorrentCreated   `json:"data"`
+	Success bool                 `json:"success"`
+	Data    TorboxTorrentCreated `json:"data"`
 }
 
 type TorboxTorrentCreated struct {
@@ -169,11 +170,11 @@ type TorboxTorrentCreated struct {
 }
 
 type TorboxTorrent struct {
-	ID            int       `json:"id"`
-	Name          string    `json:"name"`
-	DownloadState string    `json:"download_state"`
-	Size          int64     `json:"size"`
-	CreatedAt     UnixTime  `json:"created_at"`
+	ID            int      `json:"id"`
+	Name          string   `json:"name"`
+	DownloadState string   `json:"download_state"`
+	Size          int64    `json:"size"`
+	CreatedAt     UnixTime `json:"created_at"`
 }
 
 type TorboxTorrentListResponse struct {
@@ -182,7 +183,7 @@ type TorboxTorrentListResponse struct {
 }
 
 type TorboxTorrentDetailResponse struct {
-	Success bool          `json:"success"`
+	Success bool                `json:"success"`
 	Data    TorboxTorrentDetail `json:"data"`
 }
 

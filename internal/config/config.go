@@ -6,17 +6,24 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/joho/godotenv"
 	"github.com/soham/rdbatch/internal/models"
 )
+
+func init() {
+	// Load .env file if it exists (silent fail if not found)
+	_ = godotenv.Load()
+}
 
 const configDir = ".config/rdbatch"
 const configFile = "config.json"
 
 // Load resolves the active provider and its API key.
 // Resolution order:
-//   Provider: RDBATCH_PROVIDER env > provider in config file
-//   Real-Debrid key: REALDEBRID_API_KEY env > realdebrid_api_key in config > api_key in config (backward compat)
-//   Torbox key: TORBOX_API_KEY env > torbox_api_key in config
+//
+//	Provider: RDBATCH_PROVIDER env > provider in config file
+//	Real-Debrid key: REALDEBRID_API_KEY env > realdebrid_api_key in config > api_key in config (backward compat)
+//	Torbox key: TORBOX_API_KEY env > torbox_api_key in config
 func Load() (*models.Config, error) {
 	// Read config file first (we need it for fallbacks)
 	fileCfg, filePath, err := loadConfigFile()
@@ -85,4 +92,21 @@ func loadConfigFile() (*models.Config, string, error) {
 	}
 
 	return &cfg, path, nil
+}
+
+// CometURL returns the Comet manifest URL from environment or config file.
+// Resolution order: COMET_URL env > comet_url in config file
+func CometURL() string {
+	// Check environment variable first
+	if url := os.Getenv("COMET_URL"); url != "" {
+		return url
+	}
+
+	// Fall back to config file
+	cfg, _, _ := loadConfigFile()
+	if cfg != nil {
+		return cfg.CometURL
+	}
+
+	return ""
 }

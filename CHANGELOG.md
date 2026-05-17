@@ -4,6 +4,46 @@ All notable changes to `rdbatch` are documented in this file.
 
 ---
 
+## [0.3] - 2026-05-17
+
+### Added
+
+- **New `rdbatch search` command**
+  - Interactive TUI for discovering torrents without leaving the terminal
+  - Search by title through **Cinemeta** metadata API (no API key required)
+  - Scrape torrents via **Comet** addon with debrid cache indicators
+  - Multi-screen flow: Search → Results → Season picker (TV) → Episode picker (TV) → Torrents
+  - Two actions on torrents: `Enter` to add to provider, `W` to stream (cached only)
+  - Cache-aware UI: `[⚡]` = cached, `[⬇]` = uncached
+  - Toggle uncached visibility with `U` key
+
+- **Cinemeta integration** (`internal/search/cinemeta.go`)
+  - Search movies and series: `GET /catalog/{type}/top/search={query}.json`
+  - Fetch series metadata: `GET /meta/series/{imdb_id}.json`
+  - Parallel requests for movie + series catalogs
+
+- **Comet integration** (`internal/search/comet.go`)
+  - Fetch streams: `GET {stream_base}/stream/{type}/{media_id}.json`
+  - Parse cache indicators from stream names (⚡/⬇️/🧲)
+  - Extract info hashes for magnet reconstruction
+  - Filter out informational/error streams
+
+- **Search TUI** (`internal/ui/search.go`)
+  - Four-screen state machine: search, seasons, episodes, torrents
+  - Preserved state when navigating back with `Esc`
+  - Loading spinners, error messages, toast confirmations
+  - Keyboard shortcuts: `/` focus search, `U` toggle uncached, `W` watch cached
+
+- **Configuration**
+  - New `COMET_URL` environment variable
+  - New `comet_url` config file field
+  - Automatic `.env` file loading at startup
+
+- **Provider mismatch warning**
+  - Displays warning if Comet appears configured for a different debrid than `RDBATCH_PROVIDER`
+
+---
+
 ## [0.2] - 2026-05-16
 
 ### Added
