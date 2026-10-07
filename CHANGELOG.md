@@ -4,6 +4,24 @@ All notable changes to `rdbatch` are documented in this file.
 
 ---
 
+## Unreleased
+
+### Added
+
+- Terminal download dashboard with per-file progress, speed, estimated time remaining, and failure messages.
+- Scrollable download list and batch cancellation. Final results remain in the terminal.
+- Exclude `.nfo` files from whole-torrent and individual-file downloads without deleting existing local files.
+
+### Fixed
+
+- Downloads from different selected torrents now run together in one background aria2 process.
+- The concurrency limit applies to the entire selection rather than one torrent at a time.
+- Failed downloads return a command error instead of reporting success.
+- Default to four simultaneous files instead of unlimited downloads to reduce server rate limiting. `-c 0` still enables unlimited downloads.
+- Retry rate-limited downloads up to five times with increasing delays while keeping other files running.
+- Keep downloads running when local progress requests time out, and show a temporary progress notice.
+- Save resume files every five seconds and stop aria2 gracefully on cancellation to preserve downloaded pieces.
+
 ## [0.3] - 2026-05-17
 
 ### Added

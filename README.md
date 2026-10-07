@@ -228,12 +228,27 @@ Each row shows the torrent name, status, size, and added date.
 #### Download Options
 
 ```bash
-# Unlimited concurrent downloads (default)
+# Download up to 4 files at once (default)
 rdbatch list
 
-# Limit to 5 concurrent aria2 jobs
+# Limit to 5 simultaneous files across all selected torrents
 rdbatch list -c 5
+
+# Explicitly allow unlimited simultaneous files
+rdbatch list -c 0
 ```
+
+After selection, a download dashboard shows each file's name, progress bar,
+downloaded size, speed, estimated time remaining, and status. All selected torrents
+share one background aria2 process, so one torrent no longer waits for another to finish.
+Use the arrow keys to scroll. Press `q` or `Ctrl+C` to cancel the batch.
+Completed and failed rows stay visible until you press `Enter` or `q`.
+Failure messages appear next to the affected file, and the final report remains
+in your terminal after closing the dashboard.
+
+Files ending in `.nfo` are excluded from downloads, regardless of capitalization.
+This also applies when selecting individual files. Other files, including subtitles,
+are unchanged. Existing local `.nfo` files are not deleted.
 
 Downloads are saved to your **current working directory**:
 
@@ -242,6 +257,39 @@ cd ~/downloads/movies
 rdbatch list
 # files appear in ~/downloads/movies
 ```
+
+HTTP 429 means the download server is rate-limiting requests. The affected file
+waits before retrying, up to five times, with delays of 15, 30, 60, 120, and 240 seconds.
+Other downloads continue. A temporary timeout reading aria2 progress leaves the
+downloads running and shows a notice until progress updates recover.
+
+#### Checking and resuming interrupted downloads
+
+Check whether aria2 is still running:
+
+```bash
+pgrep -x aria2c
+```
+
+In the original download directory, list aria2 resume files:
+
+```bash
+find . -type f -name '*.aria2' -print
+```
+
+Each `.aria2` file belongs to an unfinished download. Do not delete it or the
+corresponding partial file. File size alone does not prove completion because
+aria2 can allocate the entire file before downloading its contents.
+
+Once the previous downloader has stopped, run `rdbatch list -c 2` from that same
+directory and select the unfinished files again. The provider supplies fresh links,
+and aria2 uses the saved download pieces to resume. Do not run two downloaders on
+the same files. If a forced stop lost the resume file, complete recovery of downloaded
+pieces is not guaranteed.
+
+Resume files are saved every five seconds. Normal cancellation asks aria2 to save
+its latest progress before exiting. A server that cannot resume a partial file causes
+an error rather than silently restarting it from scratch.
 
 ---
 

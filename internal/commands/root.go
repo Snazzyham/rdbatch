@@ -3,6 +3,8 @@ package commands
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/soham/rdbatch/internal/api"
 	"github.com/soham/rdbatch/internal/download"
@@ -99,10 +101,22 @@ var listCmd = &cobra.Command{
 
 		dl := download.New(concurrent, provider.Aria2Flags())
 		var failed int
+		var batch []download.Item
 		for _, sel := range selected {
 			log.Printf("list: processing torrent id=%s name=%s files=%v", sel.TorrentID, sel.Name, sel.FileIDs)
 
-			urls, err := provider.GetDownloadLinks(sel.TorrentID, sel.FileIDs)
+			files, err := provider.ListFiles(sel.TorrentID)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error listing files for %s: %v\n", sel.Name, err)
+				failed++
+				continue
+			}
+			fileIDs := downloadableFileIDs(files, sel.FileIDs)
+			if len(fileIDs) == 0 {
+				fmt.Printf("Skipping %s: no selected files remain after excluding .nfo files.\n", sel.Name)
+				continue
+			}
+			urls, err := provider.GetDownloadLinks(sel.TorrentID, fileIDs)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error getting links for %s: %v\n", sel.Name, err)
 				failed++
@@ -115,15 +129,18 @@ var listCmd = &cobra.Command{
 				continue
 			}
 
-			if err := dl.Download(urls, cwd); err != nil {
-				fmt.Fprintf(os.Stderr, "Error downloading %s: %v\n", sel.Name, err)
-				failed++
-				continue
+			for _, url := range urls {
+				batch = append(batch, download.Item{URL: url, Name: sel.Name})
 			}
 		}
 
+		if len(batch) > 0 {
+			if err := ui.RunDownloads(cmd.Context(), dl, batch, cwd); err != nil {
+				return err
+			}
+		}
 		if failed > 0 {
-			fmt.Printf("\n%d torrent(s) failed to download.\n", failed)
+			return fmt.Errorf("%d selection(s) failed to get download links", failed)
 		} else {
 			fmt.Println("\nAll downloads complete.")
 		}
@@ -131,10 +148,33 @@ var listCmd = &cobra.Command{
 	},
 }
 
+func downloadableFileIDs(files []api.File, selected []string) []string {
+	var ids []string
+	for _, file := range files {
+		if strings.EqualFold(filepath.Ext(file.Name), ".nfo") {
+			continue
+		}
+		if len(selected) > 0 {
+			found := false
+			for _, id := range selected {
+				if id == file.ID {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+		ids = append(ids, file.ID)
+	}
+	return ids
+}
+
 func init() {
 	rootCmd.AddCommand(fetchCmd)
 	rootCmd.AddCommand(listCmd)
-	listCmd.Flags().IntVarP(&concurrent, "concurrent", "c", 0, "Maximum concurrent aria2 downloads (0 = unlimited)")
+	listCmd.Flags().IntVarP(&concurrent, "concurrent", "c", 4, "Maximum concurrent aria2 downloads (0 = unlimited)")
 }
 
 func Execute() error {
